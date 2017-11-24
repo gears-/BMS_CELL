@@ -30,6 +30,8 @@ Src/system_stm32l0xx.o: ../Src/system_stm32l0xx.c \
  /home/alex/workspace/src/BMS_Cell/BMS_CELL/Drivers/STM32L0xx_HAL_Driver/Inc/stm32l0xx_hal_pwr_ex.h \
  /home/alex/workspace/src/BMS_Cell/BMS_CELL/Drivers/STM32L0xx_HAL_Driver/Inc/stm32l0xx_hal_rtc.h \
  /home/alex/workspace/src/BMS_Cell/BMS_CELL/Drivers/STM32L0xx_HAL_Driver/Inc/stm32l0xx_hal_rtc_ex.h \
+ /home/alex/workspace/src/BMS_Cell/BMS_CELL/Drivers/STM32L0xx_HAL_Driver/Inc/stm32l0xx_hal_tim.h \
+ /home/alex/workspace/src/BMS_Cell/BMS_CELL/Drivers/STM32L0xx_HAL_Driver/Inc/stm32l0xx_hal_tim_ex.h \
  /home/alex/workspace/src/BMS_Cell/BMS_CELL/Drivers/STM32L0xx_HAL_Driver/Inc/stm32l0xx_hal_uart.h \
  /home/alex/workspace/src/BMS_Cell/BMS_CELL/Drivers/STM32L0xx_HAL_Driver/Inc/stm32l0xx_hal_uart_ex.h
 
@@ -94,6 +96,10 @@ Src/system_stm32l0xx.o: ../Src/system_stm32l0xx.c \
 /home/alex/workspace/src/BMS_Cell/BMS_CELL/Drivers/STM32L0xx_HAL_Driver/Inc/stm32l0xx_hal_rtc.h:
 
 /home/alex/workspace/src/BMS_Cell/BMS_CELL/Drivers/STM32L0xx_HAL_Driver/Inc/stm32l0xx_hal_rtc_ex.h:
+
+/home/alex/workspace/src/BMS_Cell/BMS_CELL/Drivers/STM32L0xx_HAL_Driver/Inc/stm32l0xx_hal_tim.h:
+
+/home/alex/workspace/src/BMS_Cell/BMS_CELL/Drivers/STM32L0xx_HAL_Driver/Inc/stm32l0xx_hal_tim_ex.h:
 
 /home/alex/workspace/src/BMS_Cell/BMS_CELL/Drivers/STM32L0xx_HAL_Driver/Inc/stm32l0xx_hal_uart.h:
 

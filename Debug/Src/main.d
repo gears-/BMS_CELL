@@ -31,13 +31,16 @@ Src/main.o: ../Src/main.c \
  /home/alex/workspace/src/BMS_Cell/BMS_CELL/Drivers/STM32L0xx_HAL_Driver/Inc/stm32l0xx_hal_pwr_ex.h \
  /home/alex/workspace/src/BMS_Cell/BMS_CELL/Drivers/STM32L0xx_HAL_Driver/Inc/stm32l0xx_hal_rtc.h \
  /home/alex/workspace/src/BMS_Cell/BMS_CELL/Drivers/STM32L0xx_HAL_Driver/Inc/stm32l0xx_hal_rtc_ex.h \
+ /home/alex/workspace/src/BMS_Cell/BMS_CELL/Drivers/STM32L0xx_HAL_Driver/Inc/stm32l0xx_hal_tim.h \
+ /home/alex/workspace/src/BMS_Cell/BMS_CELL/Drivers/STM32L0xx_HAL_Driver/Inc/stm32l0xx_hal_tim_ex.h \
  /home/alex/workspace/src/BMS_Cell/BMS_CELL/Drivers/STM32L0xx_HAL_Driver/Inc/stm32l0xx_hal_uart.h \
  /home/alex/workspace/src/BMS_Cell/BMS_CELL/Drivers/STM32L0xx_HAL_Driver/Inc/stm32l0xx_hal_uart_ex.h \
  /home/alex/workspace/src/BMS_Cell/BMS_CELL/Inc/adc.h \
  /home/alex/workspace/src/BMS_Cell/BMS_CELL/Inc/lptim.h \
  /home/alex/workspace/src/BMS_Cell/BMS_CELL/Inc/usart.h \
  /home/alex/workspace/src/BMS_Cell/BMS_CELL/Inc/rtc.h \
- /home/alex/workspace/src/BMS_Cell/BMS_CELL/Inc/gpio.h
+ /home/alex/workspace/src/BMS_Cell/BMS_CELL/Inc/gpio.h \
+ /home/alex/workspace/src/BMS_Cell/BMS_CELL/Inc/tim.h
 
 /home/alex/workspace/src/BMS_Cell/BMS_CELL/Inc/main.h:
 
@@ -103,6 +106,10 @@ Src/main.o: ../Src/main.c \
 
 /home/alex/workspace/src/BMS_Cell/BMS_CELL/Drivers/STM32L0xx_HAL_Driver/Inc/stm32l0xx_hal_rtc_ex.h:
 
+/home/alex/workspace/src/BMS_Cell/BMS_CELL/Drivers/STM32L0xx_HAL_Driver/Inc/stm32l0xx_hal_tim.h:
+
+/home/alex/workspace/src/BMS_Cell/BMS_CELL/Drivers/STM32L0xx_HAL_Driver/Inc/stm32l0xx_hal_tim_ex.h:
+
 /home/alex/workspace/src/BMS_Cell/BMS_CELL/Drivers/STM32L0xx_HAL_Driver/Inc/stm32l0xx_hal_uart.h:
 
 /home/alex/workspace/src/BMS_Cell/BMS_CELL/Drivers/STM32L0xx_HAL_Driver/Inc/stm32l0xx_hal_uart_ex.h:
@@ -116,3 +123,5 @@ Src/main.o: ../Src/main.c \
 /home/alex/workspace/src/BMS_Cell/BMS_CELL/Inc/rtc.h:
 
 /home/alex/workspace/src/BMS_Cell/BMS_CELL/Inc/gpio.h:
+
+/home/alex/workspace/src/BMS_Cell/BMS_CELL/Inc/tim.h:

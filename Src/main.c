@@ -43,6 +43,7 @@
 #include "usart.h"
 #include "rtc.h"
 #include "gpio.h"
+#include "tim.h"
 //#include <stdio.h>
 
 /* USER CODE BEGIN Includes */
@@ -56,12 +57,15 @@
 #define RANGE_12BITS ((uint16_t) (4095))
 #define BITS_TO_VOLTAGE(ADC_DATA) \
 	((ADC_DATA) * VDD_APPLI / RANGE_12BITS)
+#define TemperatureCalculate(data) \
+	((((data * VDD_APPLI / VDD_CALIB) - (int32_t) *TEMP30_CAL_ADDR) * (int32_t)(130-30)) / (int32_t)(*TEMP130_CAL_ADDR - *TEMP30_CAL_ADDR));
+
 
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
 	char  buffer[15];
-	int len, i;
+	int len, i, pwm_value, step;
 	uint32_t j;
 
 
@@ -75,7 +79,7 @@ void SystemClock_Config(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
-int32_t TemperatureCalculate(uint32_t data);
+// int32_t TemperatureCalculate(uint32_t data);
 int32_t GetTemp();
 
 /* USER CODE END PFP */
@@ -113,6 +117,7 @@ int main(void)
   MX_GPIO_Init();
   MX_ADC_Init();
   MX_LPTIM1_Init();
+  MX_TIM2_Init();
   MX_LPUART1_UART_Init();
   MX_USART2_UART_Init();
   MX_RTC_Init();
@@ -120,21 +125,20 @@ int main(void)
   /* USER CODE BEGIN 2 */
 i = 0;
 j = 1;
-//__HAL_ADC_ENABLE_IT(&hadc, (ADC_IT_OVR));
-HAL_ADC_Start(&hadc);
-//HAL_ADC_PollForConversion(&hadc, (1000/TIMER_FREQUENCY_HZ));
+
+HAL_ADC_Start(&hadc); // start ADC conversion
+//HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_2); // enable PWM output from TIM2
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-// ADC1->CR |= ADC_CR_ADSTART;
   while (1)
   {
   /* USER CODE END WHILE */
 
 	  HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_3);
-	  HAL_Delay(500);
+	  HAL_Delay(200);
 
 	  ADC1->CHSELR = ADC_CHSELR_CHSEL18; // select temp sensor channel
 
@@ -142,19 +146,21 @@ HAL_ADC_Start(&hadc);
 	  len=sprintf(buffer,"Temp %i C\r\n",i);
 	  HAL_UART_Transmit(&huart2, buffer , len, 1000);
 
-	  ADC1->CHSELR = ADC_CHSELR_CHSEL17; // select VREFINT channel
+	  ADC1->CHSELR = ADC_CHSELR_CHSEL1; // select AD1 channel
 
-	  i = BITS_TO_VOLTAGE(ADC1->DR);
-	  len=sprintf(buffer,"VREFINT %i mV\r\n",i);
-	  HAL_UART_Transmit(&huart2, buffer , len, 1000);
-
-	  ADC1->CHSELR = ADC_CHSELR_CHSEL1; // select CH1 channel
-
-	  i = BITS_TO_VOLTAGE(ADC1->DR);
-	  len=sprintf(buffer,"CH1 %i mV\r\n",i);
+	  i = BITS_TO_VOLTAGE(ADC1->DR) * 1.925 ;
+	  len=sprintf(buffer,"Cell %i mV\r\n",i)-1;
 	  HAL_UART_Transmit(&huart2, buffer , len, 1000);
 
 
+	  if(pwm_value == 0) step = 1;
+	  if(pwm_value == 100) step = -1;
+	  pwm_value += step;
+	  TIM2_CH2_PWM_Setvalue(pwm_value); // setting PWM
+
+	  i = pwm_value;
+	  len=sprintf(buffer,"Load  %i %% \r\n",i);
+	  HAL_UART_Transmit(&huart2, buffer , len, 1000);
 
   /* USER CODE BEGIN 3 */
 
@@ -228,7 +234,7 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-int32_t TemperatureCalculate(uint32_t data)
+/* int32_t TemperatureCalculate(uint32_t data)
 {
 	int32_t temperature;
 
@@ -238,6 +244,7 @@ int32_t TemperatureCalculate(uint32_t data)
 //	temperature = temperature + 30;
 	return(temperature);
 }
+*/
 
 int32_t GetTemp()
 {

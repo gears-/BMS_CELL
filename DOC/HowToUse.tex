@@ -1,0 +1,41 @@
+
+\documentclass{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[english,russian]{babel}
+\begin{document}
+Read Cell Voltage:
+
+Send - 0001FF
+
+Receive like - DAEFFF - 3502 mV
+
+Read Cell Temperature:
+
+Send - 0002FF
+
+Receive like - 01CFFF - $28 ^{o}C$
+
+Read Load State:
+
+Send - 0003FF
+
+Receive Like - 038FFF - 56\%
+
+Set Load State:
+
+000BFF - 0\% load
+
+064BFF - 100\% load
+
+Calibrate Cell Voltage:
+
+D809FF - Set measured voltage to 3456 mV
+
+Calibrate Cell Temperature:
+
+020AFF - Set measured Temperature to $32 ^{o}C$
+
+
+Remark - 'FF' is CRC field, now not implemented yet.
+\end{document}

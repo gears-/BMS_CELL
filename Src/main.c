@@ -44,6 +44,7 @@
 #include "rtc.h"
 #include "gpio.h"
 #include "tim.h"
+#include "communication.h"
 //#include <stdio.h>
 
 /* USER CODE BEGIN Includes */
@@ -55,6 +56,8 @@
 #define VDD_APPLI ((uint16_t) (3300))
 #define VDD_CALIB ((uint16_t) (3000))
 #define RANGE_12BITS ((uint16_t) (4095))
+#define IGNORE_KEY ((uint16_t) (0xF00))
+//macros
 #define BITS_TO_VOLTAGE(ADC_DATA) \
 	((ADC_DATA) * VDD_APPLI / RANGE_12BITS)
 #define TemperatureCalculate(data) \
@@ -64,9 +67,10 @@
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
-	char  buffer[15];
-	int len, i, pwm_value, step;
-	uint32_t j;
+	char  buffer[15], Rx_indx, Rx_data[2], Rx_Buffer[100], Transfer_cplt;
+	int len, i, step, Cell_Temperature, Cell_Voltage;
+	int PWM_Value = 0;
+	uint32_t Tx_Data;
 
 
 /* USER CODE BEGIN PV */
@@ -81,6 +85,8 @@ void SystemClock_Config(void);
 /* Private function prototypes -----------------------------------------------*/
 // int32_t TemperatureCalculate(uint32_t data);
 int32_t GetTemp();
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
+uint8_t Calculate_CRC(uint16_t data_crc);
 
 /* USER CODE END PFP */
 
@@ -124,7 +130,8 @@ int main(void)
 
   /* USER CODE BEGIN 2 */
 i = 0;
-j = 1;
+
+HAL_UART_Receive_IT(&huart2, Rx_data, 1); //enable uart rx interrupt every time receiving 1 byte
 
 HAL_ADC_Start(&hadc); // start ADC conversion
 //HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_2); // enable PWM output from TIM2
@@ -140,28 +147,70 @@ HAL_ADC_Start(&hadc); // start ADC conversion
 	  HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_3);
 	  HAL_Delay(200);
 
-	  ADC1->CHSELR = ADC_CHSELR_CHSEL18; // select temp sensor channel
-
-	  i = TemperatureCalculate((int32_t) ADC1->DR);
-	  len=sprintf(buffer,"Temp %i C\r\n",i);
-	  HAL_UART_Transmit(&huart2, buffer , len, 1000);
-
-	  ADC1->CHSELR = ADC_CHSELR_CHSEL1; // select AD1 channel
-
-	  i = BITS_TO_VOLTAGE(ADC1->DR) * 1.925 ;
-	  len=sprintf(buffer,"Cell %i mV\r\n",i)-1;
-	  HAL_UART_Transmit(&huart2, buffer , len, 1000);
+if (Transfer_cplt == 1)// && Rx_Buffer[0] == 'D')
+{
+	//	HAL_UART_Transmit(&huart2, Rx_Buffer , 3, 1000); //Echo
+	//	HAL_UART_Transmit(&huart2, "\r\n" , 2, 1000);
 
 
-	  if(pwm_value == 0) step = 1;
-	  if(pwm_value == 100) step = -1;
-	  pwm_value += step;
-	  TIM2_CH2_PWM_Setvalue(pwm_value); // setting PWM
+	if ((Rx_Buffer[1] & 0x7) == 0x1)
+	{
+		ADC1->CHSELR = ADC_CHSELR_CHSEL1; // select AD1 channel
 
-	  i = pwm_value;
-	  len=sprintf(buffer,"Load  %i %% \r\n",i);
-	  HAL_UART_Transmit(&huart2, buffer , len, 1000);
+		Cell_Voltage = BITS_TO_VOLTAGE(ADC1->DR) * 1.925;// convert adc data to millivolts
+		/*
+		 * need to add calibration correction algorithm
+		 */
+		Send_Updated_Packet(Cell_Voltage);// send cell voltage
 
+		/* human readable cell voltage info send
+		len=sprintf(buffer,"Cell %i mV\r\n",Cell_Voltage)-1;
+		HAL_UART_Transmit(&huart2, buffer , len, 1000);
+		 */
+
+	}
+
+
+	if ((Rx_Buffer[1] & 0x7) == 0x2)
+	{
+		ADC1->CHSELR = ADC_CHSELR_CHSEL18; // select temp sensor channel
+
+		Cell_Temperature = TemperatureCalculate((int32_t) ADC1->DR);// convert adc data to temperture in C
+		/*
+		 * need to add calibration correction algorithm
+		 */
+		Send_Updated_Packet(Cell_Temperature);// send cell temperature
+
+		/* human readable cell temperature info send
+		len=sprintf(buffer,"Temp %i C\r\n",Cell_Temperature);
+		HAL_UART_Transmit(&huart2, buffer , len, 1000);
+		 */
+
+	}
+
+	if ((Rx_Buffer[1] & 0x7) == 0x3)
+	{
+		if ((Rx_Buffer[1] & 0x8) == 0x8)
+		{
+			PWM_Value = (((Rx_Buffer[0] << 0x4) & 0xFF0) + ((Rx_Buffer[1] >> 0x4) & 0xF));
+			/* human readable update load state info
+			len=sprintf(buffer,"Update \r\n");
+			HAL_UART_Transmit(&huart2, buffer , len, 1000);
+			 */
+		}
+		TIM2_CH2_PWM_Setvalue(100 - PWM_Value); // setting PWM (inverted signal)
+
+		Send_Updated_Packet(PWM_Value);// send load state
+
+		/* human readable load state info
+		len=sprintf(buffer,"Load  %i %% \r\n",PWM_Value);
+		HAL_UART_Transmit(&huart2, buffer , len, 1000);
+		 */
+	}
+
+	  Transfer_cplt = 0;
+
+}
   /* USER CODE BEGIN 3 */
 
   }
@@ -265,6 +314,38 @@ int32_t GetTemp()
 	}
 	return(ADC1->DR);
 }
+
+//Interrupt callback routine
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+    uint8_t i;
+    if (huart->Instance == USART2)  //current UART
+        {
+        if (Rx_indx==0) {for (i=0;i<100;i++) Rx_Buffer[i]=0;}   //clear Rx_Buffer before receiving new data
+
+        if (Rx_data[0]!=13) //if received data different from ascii 13 (enter)
+            {
+            Rx_Buffer[Rx_indx++]=Rx_data[0];    //add data to Rx_Buffer
+            }
+        else            //if received data = 13
+            {
+            Rx_indx=0;
+            Transfer_cplt=1;//transfer complete, data is ready to read
+            }
+
+        HAL_UART_Receive_IT(&huart2, Rx_data, 1);   //activate UART receive interrupt every time
+        }
+
+}
+
+//calculate 8-bit CRC
+uint8_t Calculate_CRC(uint16_t data_crc)
+{
+
+	return(0xFF);// temporary data
+}
+
+
 /* USER CODE END 4 */
 
 /**

@@ -1,8 +1,8 @@
-Src/main.o: ../Src/main.c \
+Src/communication.o: ../Src/communication.c \
+ /home/alex/workspace/src/BMS_Cell/BMS_CELL/Inc/communication.h \
  /home/alex/workspace/src/BMS_Cell/BMS_CELL/Inc/main.h \
  /home/alex/workspace/src/BMS_Cell/BMS_CELL/Drivers/STM32L0xx_HAL_Driver/Inc/stm32l0xx_hal.h \
  /home/alex/workspace/src/BMS_Cell/BMS_CELL/Inc/stm32l0xx_hal_conf.h \
- /home/alex/workspace/src/BMS_Cell/BMS_CELL/Inc/main.h \
  /home/alex/workspace/src/BMS_Cell/BMS_CELL/Drivers/STM32L0xx_HAL_Driver/Inc/stm32l0xx_hal_rcc.h \
  /home/alex/workspace/src/BMS_Cell/BMS_CELL/Drivers/STM32L0xx_HAL_Driver/Inc/stm32l0xx_hal_def.h \
  /home/alex/workspace/src/BMS_Cell/BMS_CELL/Drivers/CMSIS/Device/ST/STM32L0xx/Include/stm32l0xx.h \
@@ -35,21 +35,15 @@ Src/main.o: ../Src/main.c \
  /home/alex/workspace/src/BMS_Cell/BMS_CELL/Drivers/STM32L0xx_HAL_Driver/Inc/stm32l0xx_hal_tim_ex.h \
  /home/alex/workspace/src/BMS_Cell/BMS_CELL/Drivers/STM32L0xx_HAL_Driver/Inc/stm32l0xx_hal_uart.h \
  /home/alex/workspace/src/BMS_Cell/BMS_CELL/Drivers/STM32L0xx_HAL_Driver/Inc/stm32l0xx_hal_uart_ex.h \
- /home/alex/workspace/src/BMS_Cell/BMS_CELL/Inc/adc.h \
- /home/alex/workspace/src/BMS_Cell/BMS_CELL/Inc/lptim.h \
- /home/alex/workspace/src/BMS_Cell/BMS_CELL/Inc/usart.h \
- /home/alex/workspace/src/BMS_Cell/BMS_CELL/Inc/rtc.h \
- /home/alex/workspace/src/BMS_Cell/BMS_CELL/Inc/gpio.h \
- /home/alex/workspace/src/BMS_Cell/BMS_CELL/Inc/tim.h \
- /home/alex/workspace/src/BMS_Cell/BMS_CELL/Inc/communication.h
+ /home/alex/workspace/src/BMS_Cell/BMS_CELL/Inc/usart.h
+
+/home/alex/workspace/src/BMS_Cell/BMS_CELL/Inc/communication.h:
 
 /home/alex/workspace/src/BMS_Cell/BMS_CELL/Inc/main.h:
 
 /home/alex/workspace/src/BMS_Cell/BMS_CELL/Drivers/STM32L0xx_HAL_Driver/Inc/stm32l0xx_hal.h:
 
 /home/alex/workspace/src/BMS_Cell/BMS_CELL/Inc/stm32l0xx_hal_conf.h:
-
-/home/alex/workspace/src/BMS_Cell/BMS_CELL/Inc/main.h:
 
 /home/alex/workspace/src/BMS_Cell/BMS_CELL/Drivers/STM32L0xx_HAL_Driver/Inc/stm32l0xx_hal_rcc.h:
 
@@ -115,16 +109,4 @@ Src/main.o: ../Src/main.c \
 
 /home/alex/workspace/src/BMS_Cell/BMS_CELL/Drivers/STM32L0xx_HAL_Driver/Inc/stm32l0xx_hal_uart_ex.h:
 
-/home/alex/workspace/src/BMS_Cell/BMS_CELL/Inc/adc.h:
-
-/home/alex/workspace/src/BMS_Cell/BMS_CELL/Inc/lptim.h:
-
 /home/alex/workspace/src/BMS_Cell/BMS_CELL/Inc/usart.h:
-
-/home/alex/workspace/src/BMS_Cell/BMS_CELL/Inc/rtc.h:
-
-/home/alex/workspace/src/BMS_Cell/BMS_CELL/Inc/gpio.h:
-
-/home/alex/workspace/src/BMS_Cell/BMS_CELL/Inc/tim.h:
-
-/home/alex/workspace/src/BMS_Cell/BMS_CELL/Inc/communication.h:

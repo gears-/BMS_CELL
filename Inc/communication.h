@@ -8,7 +8,6 @@
 #include "main.h"
 #include "stm32l0xx_hal.h"
 
-//extern TIM_HandleTypeDef htim2;
 
 extern void _Error_Handler(char *, int);
 extern void Send_Updated_Packet(uint16_t data);

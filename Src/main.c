@@ -67,9 +67,9 @@
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
-	char  buffer[15], Rx_indx, Rx_data[2], Rx_Buffer[100], Transfer_cplt;
-	int len, i, step, Cell_Temperature, Cell_Voltage;
-	int PWM_Value = 0;
+	char  buffer[15], Rx_indx, Rx_data[2], Rx_Buffer[200], Transfer_cplt;
+	int len, i, j, step, Cell_Temperature, Cell_Voltage, Packet_Id, Packet_Id_cplt;
+	int PWM_Value = 0, Cycles = 0, Byte_To_Receive = 2;
 	uint32_t Tx_Data;
 
 
@@ -144,16 +144,24 @@ HAL_ADC_Start(&hadc); // start ADC conversion
   {
   /* USER CODE END WHILE */
 
-	  HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_3);
-	  HAL_Delay(200);
+//	  HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_3);
+//	  HAL_Delay(200);
 
-if (Transfer_cplt == 1)// && Rx_Buffer[0] == 'D')
+if (Transfer_cplt == 1)// receive data completed
 {
-	//	HAL_UART_Transmit(&huart2, Rx_Buffer , 3, 1000); //Echo
-	//	HAL_UART_Transmit(&huart2, "\r\n" , 2, 1000);
+
+	for (j=0; j<Rx_Buffer[0]; j++)
+	{
+		if ((Rx_Buffer[(j*3+1)] != 0xFC) && ((Rx_Buffer[(j*3+1)] & 0xF) != 0xF) && (Packet_Id_cplt == 0))
+		{
+			Packet_Id = j;
+			Packet_Id_cplt = 1;
+
+		}
+	}
 
 
-	if ((Rx_Buffer[1] & 0x7) == 0x1)
+	if ((Rx_Buffer[(Packet_Id * 3) + 1] & 0x7) == 0x1)
 	{
 		ADC1->CHSELR = ADC_CHSELR_CHSEL1; // select AD1 channel
 
@@ -171,7 +179,7 @@ if (Transfer_cplt == 1)// && Rx_Buffer[0] == 'D')
 	}
 
 
-	if ((Rx_Buffer[1] & 0x7) == 0x2)
+	if ((Rx_Buffer[(Packet_Id * 3) + 1] & 0x7) == 0x2)
 	{
 		ADC1->CHSELR = ADC_CHSELR_CHSEL18; // select temp sensor channel
 
@@ -188,11 +196,11 @@ if (Transfer_cplt == 1)// && Rx_Buffer[0] == 'D')
 
 	}
 
-	if ((Rx_Buffer[1] & 0x7) == 0x3)
+	if ((Rx_Buffer[(Packet_Id * 3) + 1] & 0x7) == 0x3)
 	{
-		if ((Rx_Buffer[1] & 0x8) == 0x8)
+		if ((Rx_Buffer[(Packet_Id * 3) + 1] & 0x8) == 0x8)
 		{
-			PWM_Value = (((Rx_Buffer[0] << 0x4) & 0xFF0) + ((Rx_Buffer[1] >> 0x4) & 0xF));
+			PWM_Value = (((Rx_Buffer[(Packet_Id * 3)] << 0x4) & 0xFF0) + ((Rx_Buffer[(Packet_Id * 3) + 1] >> 0x4) & 0xF));
 			/* human readable update load state info
 			len=sprintf(buffer,"Update \r\n");
 			HAL_UART_Transmit(&huart2, buffer , len, 1000);
@@ -208,7 +216,23 @@ if (Transfer_cplt == 1)// && Rx_Buffer[0] == 'D')
 		 */
 	}
 
+	if ((Rx_Buffer[(Packet_Id * 3) + 1] & 0x7) == 0x5)
+	{
+		if ((Rx_Buffer[(Packet_Id * 3) + 1] & 0x8) == 0x8)
+		{
+			Cycles++;// in future release need to save this value in flash
+		}
+
+		Send_Updated_Packet(Cycles);// send cycles state
+
+		/* human readable cycles state info
+		len=sprintf(buffer,"Cycles  %i %% \r\n",Cycles);
+		HAL_UART_Transmit(&huart2, buffer , len, 1000);
+		 */
+	}
+
 	  Transfer_cplt = 0;
+      Byte_To_Receive = 2;
 
 }
   /* USER CODE BEGIN 3 */
@@ -321,11 +345,16 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     uint8_t i;
     if (huart->Instance == USART2)  //current UART
         {
-        if (Rx_indx==0) {for (i=0;i<100;i++) Rx_Buffer[i]=0;}   //clear Rx_Buffer before receiving new data
+        if (Rx_indx==0) {for (i=0;i<200;i++) Rx_Buffer[i]=0;}   //clear Rx_Buffer before receiving new data
 
-        if (Rx_data[0]!=13) //if received data different from ascii 13 (enter)
+//        if (Rx_data[0]!=13) //if received data different from ascii 13 (enter)
+        if (Rx_indx!= Byte_To_Receive) //if received packet number less than need to be received
             {
             Rx_Buffer[Rx_indx++]=Rx_data[0];    //add data to Rx_Buffer
+            if (Rx_Buffer[1] == 0xFC)// receive starting packet
+            {
+            	Byte_To_Receive = ((Rx_Buffer[0]) * 3) + 5;// each data packet consist from 3 bytes plus start packet and end packet
+            }
             }
         else            //if received data = 13
             {
@@ -337,6 +366,24 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
         }
 
 }
+
+void Send_Updated_Packet(uint16_t data)
+{
+	Tx_Data = ((data << 0xC) & 0x00FFF000) + IGNORE_KEY;
+	Tx_Data = Tx_Data + Calculate_CRC(Tx_Data);
+//	buffer[2] = Tx_Data & 0x0000FF;
+//	buffer[1] = (Tx_Data >> 0x8) & 0xFF;
+//	buffer[0] = (Tx_Data >> 0x10) & 0xFF;
+//	HAL_UART_Transmit(&huart2, buffer , 3, 1000);
+
+	Rx_Buffer[Packet_Id * 3 + 2] = Tx_Data & 0x0000FF;
+	Rx_Buffer[Packet_Id * 3 + 1] = (Tx_Data >> 0x8) & 0xFF;
+	Rx_Buffer[Packet_Id * 3] = (Tx_Data >> 0x10) & 0xFF;
+	HAL_UART_Transmit(&huart2, Rx_Buffer , Byte_To_Receive + 1, 1000);
+	Packet_Id_cplt = 0;
+
+}
+
 
 //calculate 8-bit CRC
 uint8_t Calculate_CRC(uint16_t data_crc)

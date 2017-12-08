@@ -14,14 +14,20 @@
 //uint32_t RECEIVE, SEND;
 char  buffer[3];
 uint32_t Tx_Data;
-
+/*
 void Send_Updated_Packet(uint16_t data)
 {
 	Tx_Data = ((data << 0xC) & 0x00FFF000) + IGNORE_KEY;
 	Tx_Data = Tx_Data + Calculate_CRC(Tx_Data);
-	buffer[2] = Tx_Data & 0x0000FF;
-	buffer[1] = (Tx_Data >> 0x8) & 0xFF;
-	buffer[0] = (Tx_Data >> 0x10) & 0xFF;
+//	buffer[2] = Tx_Data & 0x0000FF;
+//	buffer[1] = (Tx_Data >> 0x8) & 0xFF;
+//	buffer[0] = (Tx_Data >> 0x10) & 0xFF;
+//	HAL_UART_Transmit(&huart2, buffer , 3, 1000);
+
+	Rx_Buffer[Packet_Id * 3 + 2] = Tx_Data & 0x0000FF;
+	Rx_Buffer[Packet_Id * 3 + 1] = (Tx_Data >> 0x8) & 0xFF;
+	Rx_Buffer[Packet_Id * 3] = (Tx_Data >> 0x10) & 0xFF;
 	HAL_UART_Transmit(&huart2, buffer , 3, 1000);
 
 }
+*/

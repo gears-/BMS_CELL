@@ -62,16 +62,18 @@
 	((ADC_DATA) * VDD_APPLI / RANGE_12BITS)
 #define TemperatureCalculate(data) \
 	((((data * VDD_APPLI / VDD_CALIB) - (int32_t) *TEMP30_CAL_ADDR) * (int32_t)(130-30)) / (int32_t)(*TEMP130_CAL_ADDR - *TEMP30_CAL_ADDR));
+#define PacketData(ID) \
+					(((Rx_Buffer[(ID * 3)] << 0x4) & 0xFF0) + ((Rx_Buffer[(ID * 3) + 1] >> 0x4) & 0xF)) // extract paket data
+
 
 
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
 	char  buffer[15], Rx_indx, Rx_data[2], Rx_Buffer[200], Transfer_cplt;
-	int len, i, j, step, Cell_Temperature, Cell_Voltage, Packet_Id, Packet_Id_cplt;
+	int len, i, j, step, Cell_Temperature, Cell_Voltage, Packet_Id, Packet_Id_cplt, Cell_Temperature_Calibrate_Coeff, Cell_Voltage_Calibrate_Coeff;
 	int PWM_Value = 0, Cycles = 0, Byte_To_Receive = 2;
 	uint32_t Tx_Data;
-
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
@@ -152,7 +154,7 @@ if (Transfer_cplt == 1)// receive data completed
 
 	for (j=0; j<Rx_Buffer[0]; j++)
 	{
-		if ((Rx_Buffer[(j*3+1)] != 0xFC) && ((Rx_Buffer[(j*3+1)] & 0xF) != 0xF) && (Packet_Id_cplt == 0))
+		if ((Rx_Buffer[((j*3)+1)] != 0xFC) && ((Rx_Buffer[((j*3)+1)] & 0xF) != 0xF) && (Packet_Id_cplt == 0))
 		{
 			Packet_Id = j;
 			Packet_Id_cplt = 1;
@@ -169,7 +171,14 @@ if (Transfer_cplt == 1)// receive data completed
 		/*
 		 * need to add calibration correction algorithm
 		 */
-		Send_Updated_Packet(Cell_Voltage);// send cell voltage
+		if ((Rx_Buffer[(Packet_Id * 3) + 1] & 0x8) == 0x8)
+		{
+//			Cell_Voltage_Calibrate_Coeff = (((Rx_Buffer[(Packet_Id * 3)] << 0x4) & 0xFF0) \
+//					+ ((Rx_Buffer[(Packet_Id * 3) + 1] >> 0x4) & 0xF)) - Cell_Voltage; // calculate offset coefficient for voltage correction
+			Cell_Voltage_Calibrate_Coeff = PacketData(Packet_Id) - Cell_Voltage; // calculate offset coefficient for voltage correction
+		}
+
+		Send_Updated_Packet(Cell_Voltage+Cell_Voltage_Calibrate_Coeff);// send cell voltage
 
 		/* human readable cell voltage info send
 		len=sprintf(buffer,"Cell %i mV\r\n",Cell_Voltage)-1;
@@ -348,7 +357,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
         if (Rx_indx==0) {for (i=0;i<200;i++) Rx_Buffer[i]=0;}   //clear Rx_Buffer before receiving new data
 
 //        if (Rx_data[0]!=13) //if received data different from ascii 13 (enter)
-        if (Rx_indx!= Byte_To_Receive) //if received packet number less than need to be received
+        if (Rx_indx != Byte_To_Receive) //if received packet number less than need to be received
             {
             Rx_Buffer[Rx_indx++]=Rx_data[0];    //add data to Rx_Buffer
             if (Rx_Buffer[1] == 0xFC)// receive starting packet

@@ -209,7 +209,7 @@ if (Transfer_cplt == 1)// receive data completed
 	{
 		if ((Rx_Buffer[(Packet_Id * 3) + 1] & 0x8) == 0x8)
 		{
-			PWM_Value = (((Rx_Buffer[(Packet_Id * 3)] << 0x4) & 0xFF0) + ((Rx_Buffer[(Packet_Id * 3) + 1] >> 0x4) & 0xF));
+			PWM_Value = PacketData(Packet_Id); //(((Rx_Buffer[(Packet_Id * 3)] << 0x4) & 0xFF0) + ((Rx_Buffer[(Packet_Id * 3) + 1] >> 0x4) & 0xF));
 			/* human readable update load state info
 			len=sprintf(buffer,"Update \r\n");
 			HAL_UART_Transmit(&huart2, buffer , len, 1000);

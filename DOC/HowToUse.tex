@@ -4,6 +4,62 @@
 \usepackage[utf8]{inputenc}
 \usepackage[english,russian]{babel}
 \begin{document}
+
+Sampe packets to send:
+
+$02FCFF 0001FF 0001FF 02F4FF$\\
+
+Where:
+
+start packet ~~~ second cell request
+
+$\overbrace{02FCFF} \underbrace{0001FF} \overbrace{0001FF} \underbrace{02F4FF}$
+
+~~~~~~~~~~ first cell request ~~~ end packet\\
+
+Start packet:
+
+number of cells~ CRC
+
+$\overbrace{02}~~~~~\underbrace{FC}~~~~~\overbrace{FF}$
+
+~~~~~~~start packet\\
+
+Request packet:
+
+data~~~~~~~ CRC
+
+$\overbrace{00~~0}\underbrace{1}~\overbrace{FF}$
+
+~~~~~~~command\\
+
+Commands list:
+
+$1$ --- Cell voltage request
+
+$2$ --- Cell temperature request
+
+$3$ --- Cell load request
+
+$5$ --- Cell charge/discharge cycles request
+
+$9$ --- Send voltage calibration data
+
+$A$ --- Send temperature calibration data
+
+$B$ --- Set load state 
+
+$D$ --- Increase cell charge/discharge cycles\\
+
+End packet:
+
+number of cells~ CRC
+
+$\overbrace{02}~~~~~\underbrace{FC}~~~~~\overbrace{FF}$
+
+~~~~~~~start packet\\
+
+
 \S 4 Read Cell Voltage:
 
 Send - 0001FF

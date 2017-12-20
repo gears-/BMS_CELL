@@ -147,8 +147,8 @@ void TIM2_CH2_PWM_Setvalue(uint16_t value)
 
     sConfigOC.OCMode = TIM_OCMODE_PWM1;
     sConfigOC.Pulse = value;
-//   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-//    sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+    sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+    sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
     HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_2);
     HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
 }

@@ -136,9 +136,8 @@ i = 0;
 HAL_UART_Receive_IT(&huart2, Rx_data, 1); //enable uart rx interrupt every time receiving 1 byte
 
 HAL_ADC_Start(&hadc); // start ADC conversion
-//HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_2); // enable PWM output from TIM2
 
-  /* USER CODE END 2 */
+/* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */

@@ -56,7 +56,7 @@
 #define VDD_APPLI ((uint16_t) (3300))
 #define VDD_CALIB ((uint16_t) (3000))
 #define RANGE_12BITS ((uint16_t) (4095))
-#define IGNORE_KEY ((uint16_t) (0xF00))
+#define IGNORE_KEY ((uint16_t) (0xB00))
 //macros
 #define BITS_TO_VOLTAGE(ADC_DATA) \
 	((ADC_DATA) * VDD_APPLI / RANGE_12BITS)
@@ -264,13 +264,25 @@ void SystemClock_Config(void)
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
     /**Initializes the CPU, AHB and APB busses clocks 
-    */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI|RCC_OSCILLATORTYPE_MSI;
+    */ //2Mhz
+  /*RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI|RCC_OSCILLATORTYPE_MSI;
   RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.MSIState = RCC_MSI_ON;
   RCC_OscInitStruct.MSICalibrationValue = 0;
   RCC_OscInitStruct.MSIClockRange = RCC_MSIRANGE_5;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+  */
+
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSI;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = 16;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLLMUL_6;
+  RCC_OscInitStruct.PLL.PLLDIV = RCC_PLLDIV_4;
+
+
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
@@ -280,7 +292,7 @@ void SystemClock_Config(void)
     */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_MSI;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;//MSI;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
@@ -356,7 +368,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
         if (Rx_indx==0) {for (i=0;i<200;i++) Rx_Buffer[i]=0;}   //clear Rx_Buffer before receiving new data
 
 //        if (Rx_data[0]!=13) //if received data different from ascii 13 (enter)
-        if (Rx_indx != Byte_To_Receive) //if received packet number less than need to be received
+        if (Rx_indx < Byte_To_Receive) //if received packet number less than need to be received
             {
             Rx_Buffer[Rx_indx++]=Rx_data[0];    //add data to Rx_Buffer
             if (Rx_Buffer[1] == 0xFC)// receive starting packet
@@ -366,6 +378,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
             }
         else            //if received data = 13
             {
+            Rx_Buffer[Rx_indx]=Rx_data[0];    //add data to Rx_Buffer
             Rx_indx=0;
             Transfer_cplt=1;//transfer complete, data is ready to read
             }
@@ -387,7 +400,8 @@ void Send_Updated_Packet(uint16_t data)
 	Rx_Buffer[Packet_Id * 3 + 2] = Tx_Data & 0x0000FF;
 	Rx_Buffer[Packet_Id * 3 + 1] = (Tx_Data >> 0x8) & 0xFF;
 	Rx_Buffer[Packet_Id * 3] = (Tx_Data >> 0x10) & 0xFF;
-	HAL_UART_Transmit(&huart2, Rx_Buffer , Byte_To_Receive + 1, 1000);
+	HAL_UART_Transmit(&huart2, Rx_Buffer , Byte_To_Receive+1, 1000);
+	HAL_UART_Transmit(&hlpuart1, Rx_Buffer , Byte_To_Receive + 1, 1000);
 	Packet_Id_cplt = 0;
 
 }

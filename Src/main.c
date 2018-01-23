@@ -56,7 +56,7 @@
 #define VDD_APPLI ((uint16_t) (3300))
 #define VDD_CALIB ((uint16_t) (3000))
 #define RANGE_12BITS ((uint16_t) (4095))
-#define IGNORE_KEY ((uint16_t) (0xB00))
+#define IGNORE_KEY ((uint16_t) (0xF00))
 //macros
 #define BITS_TO_VOLTAGE(ADC_DATA) \
 	((ADC_DATA) * VDD_APPLI / RANGE_12BITS)
@@ -70,9 +70,9 @@
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
-	char  buffer[15], Rx_indx, Rx_data[2], Rx_Buffer[200], Transfer_cplt;
-	int len, i, j, step, Cell_Temperature, Cell_Voltage, Packet_Id, Packet_Id_cplt, Cell_Temperature_Calibrate_Coeff, Cell_Voltage_Calibrate_Coeff;
-	int PWM_Value = 0, Cycles = 0, Byte_To_Receive = 2;
+	char  buffer[15], Rx_indx, Rx_data[2], Rx_Buffer[200], Transfer_cplt, Packet;
+	int len, j, step, Cell_Temperature, Cell_Voltage, Packet_Id, Packet_Id_cplt, Cell_Temperature_Calibrate_Coeff, Cell_Voltage_Calibrate_Coeff;
+	int i = 0, PWM_Value = 0, Cycles = 0, Byte_To_Receive = 2;
 	uint32_t Tx_Data;
 
 /* USER CODE BEGIN PV */
@@ -128,14 +128,18 @@ int main(void)
   MX_TIM2_Init();
   MX_LPUART1_UART_Init();
   MX_USART2_UART_Init();
-  MX_RTC_Init();
+//  MX_RTC_Init();
 
   /* USER CODE BEGIN 2 */
-i = 0;
 
 HAL_UART_Receive_IT(&huart2, Rx_data, 1); //enable uart rx interrupt every time receiving 1 byte
 
 HAL_ADC_Start(&hadc); // start ADC conversion
+
+//		TIM2_CH2_PWM_Setvalue(100); // setting zero load (switch on by negative signal)
+TIM2_CH2_PWM_Setvalue(0); // setting zero load (switch on by positive signal)
+
+HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_SET); // switch off LED
 
 /* USER CODE END 2 */
 
@@ -145,24 +149,29 @@ HAL_ADC_Start(&hadc); // start ADC conversion
   {
   /* USER CODE END WHILE */
 
-//	  HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_3);
+ //  HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_3);
+//		len=sprintf(buffer,"Temp %i C\r\n",Cell_Temperature);
+//		HAL_UART_Transmit(&huart2, buffer , len, 1000);
+
 //	  HAL_Delay(200);
 
 if (Transfer_cplt == 1)// receive data completed
 {
 
-	for (j=0; j<Rx_Buffer[0]; j++)
+	for (j = 1; j < (Rx_Buffer[0] +1); j++)//find
 	{
-		if ((Rx_Buffer[((j*3)+1)] != 0xFC) && ((Rx_Buffer[((j*3)+1)] & 0xF) != 0xF) && (Packet_Id_cplt == 0))
+		Packet = Rx_Buffer[((j*3)+1)];// recdeived packet to check
+//		if ((Rx_Buffer[((j*3)+1)] != 0xFC) && ((Rx_Buffer[((j*3)+1)] & 0xF) != 0xF) && (Packet_Id_cplt == 0))
+		if ((Packet != 0xFC) && ((Packet & 0xF) != 0xF) && (Packet_Id_cplt == 0))// check packet to comply condition
 		{
-			Packet_Id = j;
+			Packet_Id = j;//found packet id;
 			Packet_Id_cplt = 1;
 
 		}
 	}
 
 
-	if ((Rx_Buffer[(Packet_Id * 3) + 1] & 0x7) == 0x1)
+	if ((Rx_Buffer[(Packet_Id * 3) + 1] & 0x7) == 0x1)// requested cell voltage
 	{
 		ADC1->CHSELR = ADC_CHSELR_CHSEL1; // select AD1 channel
 
@@ -170,7 +179,7 @@ if (Transfer_cplt == 1)// receive data completed
 		/*
 		 * need to add calibration correction algorithm
 		 */
-		if ((Rx_Buffer[(Packet_Id * 3) + 1] & 0x8) == 0x8)
+		if ((Rx_Buffer[(Packet_Id * 3) + 1] & 0x8) == 0x8)// request cell voltage calibration
 		{
 //			Cell_Voltage_Calibrate_Coeff = (((Rx_Buffer[(Packet_Id * 3)] << 0x4) & 0xFF0) \
 //					+ ((Rx_Buffer[(Packet_Id * 3) + 1] >> 0x4) & 0xF)) - Cell_Voltage; // calculate offset coefficient for voltage correction
@@ -187,7 +196,7 @@ if (Transfer_cplt == 1)// receive data completed
 	}
 
 
-	if ((Rx_Buffer[(Packet_Id * 3) + 1] & 0x7) == 0x2)
+	if ((Rx_Buffer[(Packet_Id * 3) + 1] & 0x7) == 0x2)// requested cell temperature
 	{
 		ADC1->CHSELR = ADC_CHSELR_CHSEL18; // select temp sensor channel
 
@@ -204,9 +213,9 @@ if (Transfer_cplt == 1)// receive data completed
 
 	}
 
-	if ((Rx_Buffer[(Packet_Id * 3) + 1] & 0x7) == 0x3)
+	if ((Rx_Buffer[(Packet_Id * 3) + 1] & 0x7) == 0x3)// request cell load state
 	{
-		if ((Rx_Buffer[(Packet_Id * 3) + 1] & 0x8) == 0x8)
+		if ((Rx_Buffer[(Packet_Id * 3) + 1] & 0x8) == 0x8)// request update cell load state
 		{
 			PWM_Value = PacketData(Packet_Id); //(((Rx_Buffer[(Packet_Id * 3)] << 0x4) & 0xFF0) + ((Rx_Buffer[(Packet_Id * 3) + 1] >> 0x4) & 0xF));
 			/* human readable update load state info
@@ -214,7 +223,8 @@ if (Transfer_cplt == 1)// receive data completed
 			HAL_UART_Transmit(&huart2, buffer , len, 1000);
 			 */
 		}
-		TIM2_CH2_PWM_Setvalue(100 - PWM_Value); // setting PWM (inverted signal)
+//		TIM2_CH2_PWM_Setvalue(100 - PWM_Value); // setting PWM (switch on by negative signal)
+		TIM2_CH2_PWM_Setvalue(PWM_Value); // setting PWM (switch on by positive signal)
 
 		Send_Updated_Packet(PWM_Value);// send load state
 
@@ -363,9 +373,10 @@ int32_t GetTemp()
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
     uint8_t i;
-    if (huart->Instance == USART2)  //current UART
+    if (huart->Instance == USART2)  //current UART USART2
         {
         if (Rx_indx==0) {for (i=0;i<200;i++) Rx_Buffer[i]=0;}   //clear Rx_Buffer before receiving new data
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_RESET); // switch on LED
 
 //        if (Rx_data[0]!=13) //if received data different from ascii 13 (enter)
         if (Rx_indx < Byte_To_Receive) //if received packet number less than need to be received
@@ -381,6 +392,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
             Rx_Buffer[Rx_indx]=Rx_data[0];    //add data to Rx_Buffer
             Rx_indx=0;
             Transfer_cplt=1;//transfer complete, data is ready to read
+            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_SET); // switch off LED
+
             }
 
         HAL_UART_Receive_IT(&huart2, Rx_data, 1);   //activate UART receive interrupt every time

@@ -58,15 +58,11 @@
 #define VDD_CALIB ((uint16_t) (3000))
 #define RANGE_12BITS ((uint16_t) (4095))
 #define IGNORE_KEY ((uint16_t) (0xF00))
+
 //macros
-//#define BITS_TO_VOLTAGE(ADC_DATA, VREFINT_DATA) \
-	( ((ADC_DATA / RANGE_12BITS) * (VDD_CALIB) * (*VREFINT_CAL_ADDR)) / ( VREFINT_DATA * RANGE_12BITS ) )
 
 #define BITS_TO_VOLTAGE(ADC_DATA, VDD) \
 	((ADC_DATA) * VDD) / ( RANGE_12BITS )
-
-//#define BITS_TO_VOLTAGE(ADC_DATA, VDD) \
-	(VDD)
 
 #define BITS_TO_VOLTAGE_VDD(VREFINT_DATA) \
 	((VDD_CALIB) * ((int32_t) *VREFINT_CAL_ADDR)) / ( VREFINT_DATA )
@@ -97,7 +93,6 @@ void SystemClock_Config(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
-// int32_t TemperatureCalculate(uint32_t data);
 int32_t GetTemp();
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
 uint8_t Calculate_CRC(uint16_t data_crc);
@@ -123,6 +118,12 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 		Cell_Temperature = TemperatureCalculate(ADC_raw[2]);// convert adc data to temperture in C
 
 	}
+}
+
+void HAL_LPTIM_CompareMatchCallback(LPTIM_HandleTypeDef *hlptim1)
+{
+    Rx_indx=0; //reset receive
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_SET); // switch off LED
 }
 /* USER CODE END 0 */
 
@@ -164,8 +165,7 @@ int main(void)
 
 HAL_UART_Receive_IT(&huart2, Rx_data, 1); //enable uart rx interrupt every time receiving 1 byte
 
-HAL_ADC_Start_IT(&hadc);
-//HAL_ADC_Start(&hadc); // start ADC conversion
+HAL_ADC_Start_IT(&hadc); // start ADC conversion
 
 //		TIM2_CH2_PWM_Setvalue(100); // setting zero load (switch on by negative signal)
 TIM2_CH2_PWM_Setvalue(0); // setting zero load (switch on by positive signal)
@@ -361,37 +361,30 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-/* int32_t TemperatureCalculate(uint32_t data)
-{
-	int32_t temperature;
 
-	temperature = ((data * VDD_APPLI / VDD_CALIB) - (int32_t) *TEMP30_CAL_ADDR);
-	temperature = temperature * (int32_t)(130-30);
-	temperature = temperature / (int32_t)(*TEMP130_CAL_ADDR - *TEMP30_CAL_ADDR);
-//	temperature = temperature + 30;
-	return(temperature);
-}
-*/
 
-int32_t GetTemp()
-{
-	/* (2) Select the auto off mode */
-	/* (3) Select CHSEL17 for VRefInt */
-	/* (4) Select a sampling mode of 111 i.e. 239.5 ADC clk to be greater than
-	17.1us */
-	/* (5) Wake-up the VREFINT (only for Temp sensor and VRefInt) */
-	ADC1->CFGR1 |= ADC_CFGR1_AUTOFF; /* (2) */
-	ADC1->CHSELR = ADC_CHSELR_CHSEL18; /* (3) */
-	ADC1->SMPR |= ADC_SMPR_SMP_0 | ADC_SMPR_SMP_1 | ADC_SMPR_SMP_2; /* (4) */
-	ADC->CCR |= ADC_CCR_VREFEN; /* (5) */
-	/* Performs the AD conversion */
-	ADC1->CR |= ADC_CR_ADSTART; /* start the ADC conversion */
-	while ((SYSCFG->CFGR3 & SYSCFG_CFGR3_SENSOR_ADC_RDYF) == 0) /* wait end of conversion */
-	{
-		/* For robust implementation, add here time-out management */
-	}
-	return(ADC1->DR);
-}
+//int32_t GetTemp()
+//{
+//	/* (2) Select the auto off mode */
+//	/* (3) Select CHSEL17 for VRefInt */
+//	/* (4) Select a sampling mode of 111 i.e. 239.5 ADC clk to be greater than
+//	17.1us */
+//	/* (5) Wake-up the VREFINT (only for Temp sensor and VRefInt) */
+//	ADC1->CFGR1 |= ADC_CFGR1_AUTOFF; /* (2) */
+//	ADC1->CHSELR = ADC_CHSELR_CHSEL18; /* (3) */
+//	ADC1->SMPR |= ADC_SMPR_SMP_0 | ADC_SMPR_SMP_1 | ADC_SMPR_SMP_2; /* (4) */
+//	ADC->CCR |= ADC_CCR_VREFEN; /* (5) */
+//	/* Performs the AD conversion */
+//	ADC1->CR |= ADC_CR_ADSTART; /* start the ADC conversion */
+//	while ((SYSCFG->CFGR3 & SYSCFG_CFGR3_SENSOR_ADC_RDYF) == 0) /* wait end of conversion */
+//	{
+//		/* For robust implementation, add here time-out management */
+//	}
+//	return(ADC1->DR);
+//}
+
+
+
 
 //Interrupt callback routine
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
@@ -400,7 +393,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     if (huart->Instance == USART2)  //current UART USART2
         {
         if (Rx_indx==0) {for (i=0;i<200;i++) Rx_Buffer[i]=0;}   //clear Rx_Buffer before receiving new data
-        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_RESET); // switch on LED
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_RESET); //switch on LED
+        HAL_LPTIM_TimeOut_Start_IT(&hlptim1, 0xFFFF, 0xFFFF); //start timeout timer
 
 //        if (Rx_data[0]!=13) //if received data different from ascii 13 (enter)
         if (Rx_indx < Byte_To_Receive) //if received packet number less than need to be received
@@ -417,7 +411,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
             Rx_indx=0;
             Transfer_cplt=1;//transfer complete, data is ready to read
             HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_SET); // switch off LED
-
             }
 
         HAL_UART_Receive_IT(&huart2, Rx_data, 1);   //activate UART receive interrupt every time

@@ -207,12 +207,12 @@ if (Transfer_cplt == 1)// receive data completed
 			Cell_Voltage_Calibrate_Coeff = PacketData(Packet_Id) - Cell_Voltage; // calculate offset coefficient for voltage correction
 		}
 
-//		Send_Updated_Packet(Cell_Voltage+Cell_Voltage_Calibrate_Coeff);// send cell voltage
+		Send_Updated_Packet(Cell_Voltage+Cell_Voltage_Calibrate_Coeff);// send cell voltage
 
-//		/* human readable cell voltage info send
+		/* human readable cell voltage info send
 		len=sprintf(buffer,"Cell %i mV\r\n",Cell_Voltage+Cell_Voltage_Calibrate_Coeff)-1;
 		HAL_UART_Transmit(&huart2, buffer , len, 1000);
-//		 */
+		 */
 
 	}
 
@@ -224,12 +224,12 @@ if (Transfer_cplt == 1)// receive data completed
 		/*
 		 * need to add calibration correction algorithm
 		 */
-//		Send_Updated_Packet(Cell_Temperature);// send cell temperature
+		Send_Updated_Packet(Cell_Temperature);// send cell temperature
 
-//		/* human readable cell temperature info send
+		/* human readable cell temperature info send
 		len=sprintf(buffer,"Temp %i C\r\n",Cell_Temperature);
 		HAL_UART_Transmit(&huart2, buffer , len, 1000);
-//		 */
+		 */
 
 	}
 

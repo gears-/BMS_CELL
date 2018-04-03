@@ -53,26 +53,38 @@
 /* Temperature sensor calibration value adress */
 #define TEMP30_CAL_ADDR ((uint16_t*)((uint32_t) 0x1FF8007A))
 #define TEMP130_CAL_ADDR ((uint16_t*)((uint32_t) 0x1FF8007E))
+#define VREFINT_CAL_ADDR ((uint16_t*)((uint32_t) 0x1FF80078))
 #define VDD_APPLI ((uint16_t) (3300))
 #define VDD_CALIB ((uint16_t) (3000))
 #define RANGE_12BITS ((uint16_t) (4095))
 #define IGNORE_KEY ((uint16_t) (0xF00))
 //macros
-#define BITS_TO_VOLTAGE(ADC_DATA) \
-	((ADC_DATA) * VDD_APPLI / RANGE_12BITS)
+//#define BITS_TO_VOLTAGE(ADC_DATA, VREFINT_DATA) \
+	( ((ADC_DATA / RANGE_12BITS) * (VDD_CALIB) * (*VREFINT_CAL_ADDR)) / ( VREFINT_DATA * RANGE_12BITS ) )
+
+#define BITS_TO_VOLTAGE(ADC_DATA, VDD) \
+	((ADC_DATA) * VDD) / ( RANGE_12BITS )
+
+//#define BITS_TO_VOLTAGE(ADC_DATA, VDD) \
+	(VDD)
+
+#define BITS_TO_VOLTAGE_VDD(VREFINT_DATA) \
+	((VDD_CALIB) * ((int32_t) *VREFINT_CAL_ADDR)) / ( VREFINT_DATA )
+
 #define TemperatureCalculate(data) \
 	((((data * VDD_APPLI / VDD_CALIB) - (int32_t) *TEMP30_CAL_ADDR) * (int32_t)(130-30)) / (int32_t)(*TEMP130_CAL_ADDR - *TEMP30_CAL_ADDR));
+
 #define PacketData(ID) \
-					(((Rx_Buffer[(ID * 3)] << 0x4) & 0xFF0) + ((Rx_Buffer[(ID * 3) + 1] >> 0x4) & 0xF)) // extract paket data
+					(((Rx_Buffer[(ID * 3)] << 0x4) & 0xFF0) + ((Rx_Buffer[(ID * 3) + 1] >> 0x4) & 0xF)) // extract packet data
 
 
 
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
-	char  buffer[15], Rx_indx, Rx_data[2], Rx_Buffer[200], Transfer_cplt, Packet;
-	int len, j, step, Cell_Temperature, Cell_Voltage, Packet_Id, Packet_Id_cplt, Cell_Temperature_Calibrate_Coeff, Cell_Voltage_Calibrate_Coeff;
-	int i = 0, PWM_Value = 0, Cycles = 0, Byte_To_Receive = 2;
+	char  buffer[15], Rx_indx, Rx_data[2], Rx_Buffer[200], Transfer_cplt, Packet, in = 0;
+	int len, j, step, Cell_Temperature, Cell_Voltage, Packet_Id, Packet_Id_cplt, Cell_Temperature_Calibrate_Coeff, ADC_raw[3], ADCDATA, VREFDATA;
+	int i = 0, PWM_Value = 0, Cycles = 0, Byte_To_Receive = 2, Cell_Voltage_Calibrate_Coeff = 0, Vdd;
 	uint32_t Tx_Data;
 
 /* USER CODE BEGIN PV */
@@ -93,7 +105,25 @@ uint8_t Calculate_CRC(uint16_t data_crc);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
+{
+	if (__HAL_ADC_GET_FLAG(hadc, ADC_FLAG_EOC))
+	{
+		ADC_raw[in]=HAL_ADC_GetValue(hadc);
+		in++;
+	}
+	if (__HAL_ADC_GET_FLAG(hadc, ADC_FLAG_EOS))
+	{
+		in = 0;
 
+		Vdd = BITS_TO_VOLTAGE_VDD(ADC_raw[1]); // Calculate ADC supply voltage in millivilts
+
+		Cell_Voltage = BITS_TO_VOLTAGE(ADC_raw[0], Vdd) * 2 ;// Calculate cell voltage in millivolts, divider by 2 on adc input.
+
+		Cell_Temperature = TemperatureCalculate(ADC_raw[2]);// convert adc data to temperture in C
+
+	}
+}
 /* USER CODE END 0 */
 
 int main(void)
@@ -134,7 +164,8 @@ int main(void)
 
 HAL_UART_Receive_IT(&huart2, Rx_data, 1); //enable uart rx interrupt every time receiving 1 byte
 
-HAL_ADC_Start(&hadc); // start ADC conversion
+HAL_ADC_Start_IT(&hadc);
+//HAL_ADC_Start(&hadc); // start ADC conversion
 
 //		TIM2_CH2_PWM_Setvalue(100); // setting zero load (switch on by negative signal)
 TIM2_CH2_PWM_Setvalue(0); // setting zero load (switch on by positive signal)
@@ -149,11 +180,6 @@ HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_SET); // switch off LED
   {
   /* USER CODE END WHILE */
 
- //  HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_3);
-//		len=sprintf(buffer,"Temp %i C\r\n",Cell_Temperature);
-//		HAL_UART_Transmit(&huart2, buffer , len, 1000);
-
-//	  HAL_Delay(200);
 
 if (Transfer_cplt == 1)// receive data completed
 {
@@ -170,48 +196,44 @@ if (Transfer_cplt == 1)// receive data completed
 		}
 	}
 
+// voltage
 
 	if ((Rx_Buffer[(Packet_Id * 3) + 1] & 0x7) == 0x1)// requested cell voltage
 	{
-		ADC1->CHSELR = ADC_CHSELR_CHSEL1; // select AD1 channel
+		HAL_ADC_Start_IT(&hadc);
 
-		Cell_Voltage = BITS_TO_VOLTAGE(ADC1->DR) * 1.925;// convert adc data to millivolts
-		/*
-		 * need to add calibration correction algorithm
-		 */
 		if ((Rx_Buffer[(Packet_Id * 3) + 1] & 0x8) == 0x8)// request cell voltage calibration
 		{
-//			Cell_Voltage_Calibrate_Coeff = (((Rx_Buffer[(Packet_Id * 3)] << 0x4) & 0xFF0) \
-//					+ ((Rx_Buffer[(Packet_Id * 3) + 1] >> 0x4) & 0xF)) - Cell_Voltage; // calculate offset coefficient for voltage correction
 			Cell_Voltage_Calibrate_Coeff = PacketData(Packet_Id) - Cell_Voltage; // calculate offset coefficient for voltage correction
 		}
 
-		Send_Updated_Packet(Cell_Voltage+Cell_Voltage_Calibrate_Coeff);// send cell voltage
+//		Send_Updated_Packet(Cell_Voltage+Cell_Voltage_Calibrate_Coeff);// send cell voltage
 
-		/* human readable cell voltage info send
-		len=sprintf(buffer,"Cell %i mV\r\n",Cell_Voltage)-1;
+//		/* human readable cell voltage info send
+		len=sprintf(buffer,"Cell %i mV\r\n",Cell_Voltage+Cell_Voltage_Calibrate_Coeff)-1;
 		HAL_UART_Transmit(&huart2, buffer , len, 1000);
-		 */
+//		 */
 
 	}
 
+// temperature
 
 	if ((Rx_Buffer[(Packet_Id * 3) + 1] & 0x7) == 0x2)// requested cell temperature
 	{
-		ADC1->CHSELR = ADC_CHSELR_CHSEL18; // select temp sensor channel
-
-		Cell_Temperature = TemperatureCalculate((int32_t) ADC1->DR);// convert adc data to temperture in C
+		HAL_ADC_Start_IT(&hadc);
 		/*
 		 * need to add calibration correction algorithm
 		 */
-		Send_Updated_Packet(Cell_Temperature);// send cell temperature
+//		Send_Updated_Packet(Cell_Temperature);// send cell temperature
 
-		/* human readable cell temperature info send
+//		/* human readable cell temperature info send
 		len=sprintf(buffer,"Temp %i C\r\n",Cell_Temperature);
 		HAL_UART_Transmit(&huart2, buffer , len, 1000);
-		 */
+//		 */
 
 	}
+
+// load
 
 	if ((Rx_Buffer[(Packet_Id * 3) + 1] & 0x7) == 0x3)// request cell load state
 	{
@@ -233,6 +255,8 @@ if (Transfer_cplt == 1)// receive data completed
 		HAL_UART_Transmit(&huart2, buffer , len, 1000);
 		 */
 	}
+
+// cycles
 
 	if ((Rx_Buffer[(Packet_Id * 3) + 1] & 0x7) == 0x5)
 	{

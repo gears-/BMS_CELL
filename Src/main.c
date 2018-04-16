@@ -79,8 +79,8 @@
 
 /* Private variables ---------------------------------------------------------*/
 	char  buffer[15], Rx_indx, Rx_data[2], Rx_Buffer[200], Transfer_cplt, Packet, in = 0;
-	int len, j, step, Cell_Temperature, Cell_Voltage, Packet_Id, Packet_Id_cplt, Cell_Temperature_Calibrate_Coeff, ADC_raw[3], ADCDATA, VREFDATA;
-	int i = 0, PWM_Value = 0, Cycles = 0, Byte_To_Receive = 2, Cell_Voltage_Calibrate_Coeff = 0, Vdd;
+	int len, j, step, Cell_Temperature, Cell_Voltage, Packet_Id, Packet_Id_cplt, ADC_raw[3], ADCDATA, VREFDATA;
+	int i = 0, PWM_Value = 0, Cycles = 0, Byte_To_Receive = 2, Cell_Voltage_Calibrate_Coeff = 0, Cell_Temperature_Calibrate_Coeff = 0, Vdd;
 	uint32_t Tx_Data;
 
 /* USER CODE BEGIN PV */
@@ -93,7 +93,7 @@ void SystemClock_Config(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
-int32_t GetTemp();
+//int32_t GetTemp();
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
 uint8_t Calculate_CRC(uint16_t data_crc);
 
@@ -207,10 +207,10 @@ if (Transfer_cplt == 1)// receive data completed
 			Cell_Voltage_Calibrate_Coeff = PacketData(Packet_Id) - Cell_Voltage; // calculate offset coefficient for voltage correction
 		}
 
-		Send_Updated_Packet(Cell_Voltage+Cell_Voltage_Calibrate_Coeff);// send cell voltage
+		Send_Updated_Packet(Cell_Voltage + Cell_Voltage_Calibrate_Coeff);// send cell voltage
 
 		/* human readable cell voltage info send
-		len=sprintf(buffer,"Cell %i mV\r\n",Cell_Voltage+Cell_Voltage_Calibrate_Coeff)-1;
+		len=sprintf(buffer,"Cell %i mV\r\n",Cell_Voltage + Cell_Voltage_Calibrate_Coeff)-1;
 		HAL_UART_Transmit(&huart2, buffer , len, 1000);
 		 */
 
@@ -224,10 +224,15 @@ if (Transfer_cplt == 1)// receive data completed
 		/*
 		 * need to add calibration correction algorithm
 		 */
-		Send_Updated_Packet(Cell_Temperature);// send cell temperature
+		if ((Rx_Buffer[(Packet_Id * 3) + 1] & 0x8) == 0x8)// request cell temperature calibration
+		{
+			Cell_Temperature_Calibrate_Coeff = PacketData(Packet_Id) - Cell_Temperature; // calculate offset coefficient for temperature correction
+		}
+
+		Send_Updated_Packet(Cell_Temperature + Cell_Temperature_Calibrate_Coeff);// send cell temperature
 
 		/* human readable cell temperature info send
-		len=sprintf(buffer,"Temp %i C\r\n",Cell_Temperature);
+		len=sprintf(buffer,"Temp %i C\r\n",Cell_Temperature + Cell_Temperature_Calibrate_Coeff);
 		HAL_UART_Transmit(&huart2, buffer , len, 1000);
 		 */
 

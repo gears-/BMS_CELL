@@ -25,7 +25,7 @@ $\overbrace{02}~~~~~\underbrace{FC}~~~~~\overbrace{FF}$
 
 ~~~~~~~start packet\\
 
-Request packet:
+Request packet (numbers of packets the same as numbers of cells):
 
 data~~~~~~~ CRC
 
@@ -57,43 +57,45 @@ number of cells~ CRC
 
 $\overbrace{02}~~~~~\underbrace{FC}~~~~~\overbrace{FF}$
 
-~~~~~~~start packet\\
+~~~~~~~end packet\\
 
 
-\S 4 Read Cell Voltage:
+Examples of request packets and answers:\\
+
+\S 1 Read Cell Voltage:
 
 Send - 0001FF
 
-Receive like - DAEFFF - 3502 mV
+Receive like - DAEFFF - 3502 mV; where DAE is HEX value of 3502\\
 
-Read Cell Temperature:
+\S 2 Read Cell Temperature:
 
 Send - 0002FF
 
-Receive like - 01CFFF - $28 ^{o}C$
+Receive like - 01CFFF - $28 ^{o}C$; where 01C is HEX value of 28\\
 
-Read Load State:
+\S 3 Read Load State:
 
 Send - 0003FF
 
-Receive Like - 038FFF - 56\%
+Receive Like - 038FFF - 56\%; where 038 is HEX value of 56\\
 
-Set Load State:
+\S 4 Set Load State:
 
 000BFF - 0\% load
 
-064BFF - 100\% load
+064BFF - 100\% load; where 064 is HEX value of 100\\
 
-Calibrate Cell Voltage:
+\S 5 Calibrate Cell Voltage:
 
-D809FF - Set measured voltage to 3456 mV
+D809FF - Set measured voltage to 3456 mV; where D80 is HEX value of 3456\\
 
-Calibrate Cell Temperature:
+\S 6 Calibrate Cell Temperature:
 
-020AFF - Set measured Temperature to $32 ^{o}C$
+020AFF - Set measured Temperature to $32 ^{o}C$; where 020 is HEX value of 32\\
 
 
-Remark - 'FF' is CRC field, now not implemented yet.
+Remark - 'FF' is CRC field, now not implemented yet, for simple debugging main algorithm.
 
 \tableofcontents
 \end{document}
